@@ -28,16 +28,9 @@ class TemescalBridge:
     """
 
     def __init__(self, host: str, port: int) -> None:
-        """Initialize the bridge."""
-        self._host = host
-        self._port = port
+        """Initialize the bridge and connect to the device."""
         self._listeners: list[Callable[[dict[str, Any]], None]] = []
-
-    def connect(self) -> None:
-        """Open the connection and ask the device for its current state."""
-        self._device = temescal.temescal(  # pylint: disable=attribute-defined-outside-init
-            self._host, port=self._port, callback=self.handle_event
-        )
+        self._device = temescal.temescal(host, port=port, callback=self.handle_event)
         self._device.get_product_info()
         self._device.get_mac_info()
         self.refresh()
@@ -86,9 +79,10 @@ async def async_setup_entry(
     except ConnectionError as err:
         raise ConfigEntryNotReady from err
 
-    bridge = TemescalBridge(entry.data[CONF_HOST], entry.data[CONF_PORT])
     try:
-        await hass.async_add_executor_job(bridge.connect)
+        bridge = await hass.async_add_executor_job(
+            TemescalBridge, entry.data[CONF_HOST], entry.data[CONF_PORT]
+        )
     except OSError as err:
         raise ConfigEntryNotReady from err
     entry.runtime_data = bridge
