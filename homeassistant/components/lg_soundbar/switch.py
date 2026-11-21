@@ -37,7 +37,9 @@ class LGNightModeSwitch(SwitchEntity):
         self._bridge = bridge
         self._night_mode: bool | None = None
         self._attr_unique_id = f"{unique_id}_night_mode"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, unique_id)}, name=bridge.host
+        )
 
     @override
     async def async_added_to_hass(self) -> None:

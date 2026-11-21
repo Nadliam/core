@@ -29,11 +29,17 @@ class TemescalBridge:
 
     def __init__(self, host: str, port: int) -> None:
         """Initialize the bridge and connect to the device."""
+        self._host = host
         self._listeners: list[Callable[[dict[str, Any]], None]] = []
         self._device = temescal.temescal(host, port=port, callback=self.handle_event)
         self._device.get_product_info()
         self._device.get_mac_info()
         self.refresh()
+
+    @property
+    def host(self) -> str:
+        """Return the host the bridge is connected to."""
+        return self._host
 
     @property
     def device(self) -> temescal.temescal:

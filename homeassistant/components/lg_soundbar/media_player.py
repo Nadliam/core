@@ -9,7 +9,6 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -75,7 +74,6 @@ async def async_setup_entry(
         [
             LGDevice(
                 config_entry.runtime_data,
-                config_entry.data[CONF_HOST],
                 config_entry.unique_id or config_entry.entry_id,
             )
         ]
@@ -102,11 +100,10 @@ class LGDevice(MediaPlayerEntity):
     _attr_has_entity_name = True
     _attr_name = None
 
-    def __init__(self, bridge: TemescalBridge, host: str, unique_id: str) -> None:
+    def __init__(self, bridge: TemescalBridge, unique_id: str) -> None:
         """Initialize the LG speakers."""
         self._bridge = bridge
         self._device = bridge.device
-        self._host = host
         self._attr_unique_id = unique_id
 
         self._volume = 0
@@ -130,7 +127,7 @@ class LGDevice(MediaPlayerEntity):
         self._device_on = True
         self._stream_type = 0
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, unique_id)}, name=host
+            identifiers={(DOMAIN, unique_id)}, name=bridge.host
         )
 
     @override
