@@ -17,5 +17,12 @@
         }
       }
     }
+  },
+  "entity": {
+    "switch": {
+      "night_mode": {
+        "name": "Night mode"
+      }
+    }
   }
 }

@@ -30,7 +30,7 @@ def mock_temescal() -> Generator[MagicMock]:
     """
     with (
         patch(
-            "homeassistant.components.lg_soundbar.media_player.temescal.temescal",
+            "homeassistant.components.lg_soundbar.temescal.temescal",
             autospec=True,
         ) as mock_temescal,
         patch(
