@@ -9,13 +9,12 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN
+from . import LGSoundbarConfigEntry, TemescalBridge
+from .const import DOMAIN, MSG_SETTING_VIEW_INFO
 
 EQUIVALENT_FUNCTIONS = (
     ("Optical/HDMI ARC", "E-ARC", "ARC", "LG Optical", "Optical", "Optical2"),
@@ -67,15 +66,14 @@ def _offered_equivalent(function: str, offered: list[int]) -> str | None:
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: LGSoundbarConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up media_player from a config entry created in the integrations UI."""
     async_add_entities(
         [
             LGDevice(
-                config_entry.data[CONF_HOST],
-                config_entry.data[CONF_PORT],
+                config_entry.runtime_data,
                 config_entry.unique_id or config_entry.entry_id,
             )
         ]
@@ -102,19 +100,19 @@ class LGDevice(MediaPlayerEntity):
     _attr_has_entity_name = True
     _attr_name = None
 
-    def __init__(self, host, port, unique_id):
+    def __init__(self, bridge: TemescalBridge, unique_id: str) -> None:
         """Initialize the LG speakers."""
-        self._host = host
-        self._port = port
+        self._bridge = bridge
+        self._device = bridge.device
         self._attr_unique_id = unique_id
 
         self._volume = 0
         self._volume_min = 0
         self._volume_max = 0
         self._function = -1
-        self._functions = []
+        self._functions: list[int] = []
         self._equaliser = -1
-        self._equalisers = []
+        self._equalisers: list[int] = []
         self._mute = 0
         self._rear_volume = 0
         self._rear_volume_min = 0
@@ -124,28 +122,26 @@ class LGDevice(MediaPlayerEntity):
         self._woofer_volume_max = 0
         self._bass = 0
         self._treble = 0
-        self._device = None
         self._support_play_control = False
         # Starts out matching the ON default of _attr_state, for the same reason
         self._device_on = True
         self._stream_type = 0
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, unique_id)}, name=host
+            identifiers={(DOMAIN, unique_id)}, name=bridge.host
         )
 
     @override
     async def async_added_to_hass(self) -> None:
         """Register the callback after hass is ready for it."""
-        await self.hass.async_add_executor_job(self._connect)
+        self._bridge.add_listener(self.handle_event)
+        # The initial state responses arrive while connecting, before the
+        # entities are registered, so ask the device to report again.
+        await self.hass.async_add_executor_job(self._bridge.refresh)
 
-    def _connect(self) -> None:
-        """Perform the actual devices setup."""
-        self._device = temescal.temescal(
-            self._host, port=self._port, callback=self.handle_event
-        )
-        self._device.get_product_info()
-        self._device.get_mac_info()
-        self.update()
+    @override
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister the callback before hass tears the entity down."""
+        self._bridge.remove_listener(self.handle_event)
 
     def handle_event(self, response):
         """Handle responses from the speakers."""
@@ -174,7 +170,7 @@ class LGDevice(MediaPlayerEntity):
                 self._function = data["i_curr_func"]
             if "ai_func_list" in data:
                 self._functions = data["ai_func_list"]
-        elif response["msg"] == "SETTING_VIEW_INFO":
+        elif response["msg"] == MSG_SETTING_VIEW_INFO:
             if "i_rear_min" in data:
                 self._rear_volume_min = data["i_rear_min"]
             if "i_rear_max" in data:
@@ -241,14 +237,6 @@ class LGDevice(MediaPlayerEntity):
             self._attr_media_title = data["s_title"].strip() or None
         if "b_support_play_ctrl" in data:
             self._support_play_control = data["b_support_play_ctrl"]
-
-    def update(self) -> None:
-        """Trigger updates from the device."""
-        self._device.get_eq()
-        self._device.get_info()
-        self._device.get_func()
-        self._device.get_settings()
-        self._device.get_play()
 
     @property
     @override
