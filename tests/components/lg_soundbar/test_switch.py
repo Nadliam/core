@@ -14,9 +14,9 @@ from . import find_update_callback, setup_integration
 ENTITY_ID = "switch.127_0_0_1_night_mode"
 
 
-def send_night_mode(callback: MagicMock, enabled: bool) -> None:
-    """Report the given night mode state via the callback."""
-    callback({"msg": "SETTING_VIEW_INFO", "data": {"b_night_mode": enabled}})
+def send_night_time(callback: MagicMock, enabled: bool) -> None:
+    """Report the given night time state via the callback."""
+    callback({"msg": "SETTING_VIEW_INFO", "data": {"b_night_time": enabled}})
 
 
 async def test_state_is_unknown_before_the_device_reports(
@@ -47,7 +47,7 @@ async def test_state_follows_a_reported_night_mode(
     """Test that a reported night mode state decides the state of the switch."""
     await setup_integration(hass, mock_config_entry)
 
-    send_night_mode(find_update_callback(mock_temescal), enabled)
+    send_night_time(find_update_callback(mock_temescal), enabled)
     await hass.async_block_till_done()
 
     assert hass.states.get(ENTITY_ID).state == expected_state
@@ -58,7 +58,7 @@ async def test_turning_on(
     mock_temescal: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """Test that turning the switch on enables night mode on the device."""
+    """Test that turning the switch on sends the night time packet."""
     await setup_integration(hass, mock_config_entry)
 
     await hass.services.async_call(
@@ -69,7 +69,9 @@ async def test_turning_on(
     )
     await hass.async_block_till_done()
 
-    mock_temescal.return_value.set_night_mode.assert_called_once_with(True)
+    mock_temescal.return_value.send_packet.assert_called_once_with(
+        {"cmd": "set", "data": {"b_night_time": True}, "msg": "SETTING_VIEW_INFO"}
+    )
 
 
 async def test_turning_off(
@@ -77,7 +79,7 @@ async def test_turning_off(
     mock_temescal: MagicMock,
     mock_config_entry: MockConfigEntry,
 ) -> None:
-    """Test that turning the switch off disables night mode on the device."""
+    """Test that turning the switch off sends the night time packet."""
     await setup_integration(hass, mock_config_entry)
 
     await hass.services.async_call(
@@ -88,4 +90,6 @@ async def test_turning_off(
     )
     await hass.async_block_till_done()
 
-    mock_temescal.return_value.set_night_mode.assert_called_once_with(False)
+    mock_temescal.return_value.send_packet.assert_called_once_with(
+        {"cmd": "set", "data": {"b_night_time": False}, "msg": "SETTING_VIEW_INFO"}
+    )

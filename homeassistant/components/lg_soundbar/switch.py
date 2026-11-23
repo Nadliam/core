@@ -1,4 +1,4 @@
-"""Switch to control the night mode of an LG soundbar."""
+"""Switch to control the night time setting of an LG soundbar."""
 
 from typing import Any, override
 
@@ -9,7 +9,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import LGSoundbarConfigEntry, TemescalBridge
-from .const import DOMAIN, KEY_NIGHT_MODE, MSG_SETTING_VIEW_INFO
+from .const import DOMAIN, KEY_NIGHT_TIME, MSG_SETTING_VIEW_INFO
 
 
 async def async_setup_entry(
@@ -24,7 +24,7 @@ async def async_setup_entry(
 
 
 class LGNightModeSwitch(SwitchEntity):
-    """Representation of the night mode of an LG soundbar."""
+    """Representation of the night time setting of an LG soundbar."""
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
@@ -57,22 +57,22 @@ class LGNightModeSwitch(SwitchEntity):
     def handle_event(self, response: dict[str, Any]) -> None:
         """Handle responses from the speakers."""
         data = response.get("data") or {}
-        if response["msg"] == MSG_SETTING_VIEW_INFO and KEY_NIGHT_MODE in data:
-            self._night_mode = data[KEY_NIGHT_MODE]
+        if response["msg"] == MSG_SETTING_VIEW_INFO and KEY_NIGHT_TIME in data:
+            self._night_mode = data[KEY_NIGHT_TIME]
             self.schedule_update_ha_state()
 
     @property
     @override
     def is_on(self) -> bool | None:
-        """Return whether night mode is enabled."""
+        """Return whether night time is enabled."""
         return self._night_mode
 
     @override
     def turn_on(self, **kwargs: Any) -> None:
-        """Enable night mode."""
-        self._bridge.set_night_mode(True)
+        """Enable night time."""
+        self._bridge.set_night_time(True)
 
     @override
     def turn_off(self, **kwargs: Any) -> None:
-        """Disable night mode."""
-        self._bridge.set_night_mode(False)
+        """Disable night time."""
+        self._bridge.set_night_time(False)

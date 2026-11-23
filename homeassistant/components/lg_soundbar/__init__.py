@@ -12,6 +12,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .config_flow import test_connect
+from .const import KEY_NIGHT_TIME, MSG_SETTING_VIEW_INFO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,9 +55,19 @@ class TemescalBridge:
         self._device.get_settings()
         self._device.get_play()
 
-    def set_night_mode(self, enable: bool) -> None:
-        """Set the night mode of the device."""
-        self._device.set_night_mode(enable)
+    def set_night_time(self, enable: bool) -> None:
+        """Set the night time setting of the device.
+
+        temescal.set_night_mode writes the b_night_mode key, which newer
+        models do not have; those report and accept b_night_time instead.
+        """
+        self._device.send_packet(
+            {
+                "cmd": "set",
+                "data": {KEY_NIGHT_TIME: enable},
+                "msg": MSG_SETTING_VIEW_INFO,
+            }
+        )
 
     def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
         """Add a listener that receives all events from the device."""
